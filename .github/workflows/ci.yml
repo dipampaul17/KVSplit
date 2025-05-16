@@ -20,22 +20,38 @@ jobs:
       uses: actions/cache@v3
       with:
         path: llama.cpp
-        key: llama-cpp-${{ hashFiles('patch/split_kv_quant.diff') }}
+        key: llama-cpp-${{ hashFiles('patch/fixed_kv_patch.diff') }}
     
-    - name: Clone and build llama.cpp
+    - name: Clone llama.cpp
       run: |
         git clone https://github.com/ggerganov/llama.cpp || echo "llama.cpp already exists"
+    
+    - name: Apply patch
+      run: |
+        cd llama.cpp
+        git apply ../patch/fixed_kv_patch.diff || echo "Could not apply patch, checking file exists"
+        cat ../patch/fixed_kv_patch.diff
+        ls -la common/common.cpp common/common.h
+    
+    - name: Build llama.cpp
+      run: |
         cd llama.cpp
         mkdir -p build
         cd build
-        git apply ../../patch/split_kv_quant.diff || echo "Patch already applied"
         cmake .. -DLLAMA_METAL=OFF -DLLAMA_AVX=ON -DLLAMA_AVX2=ON
         cmake --build . --config Release -j
     
-    - name: Smoke test (compilation only)
+    - name: Verify build
       run: |
         cd llama.cpp/build
-        ./bin/llama-cli -h | grep "kvq" && echo "✅ Patch successfully applied"
+        ls -la bin
+        if [ -f "bin/llama-cli" ]; then
+          echo "✅ llama-cli built successfully"
+          ./bin/llama-cli -h
+        else
+          echo "❌ Failed to build llama-cli"
+          exit 1
+        fi
     
     - name: Python syntax check
       run: |

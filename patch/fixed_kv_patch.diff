@@ -1,0 +1,51 @@
+diff --git a/common/common.h b/common/common.h
+index abcdef1..1234567 100644
+--- a/common/common.h
++++ b/common/common.h
+@@ -100,6 +100,10 @@ struct gpt_params {
+     // use custom KV quantization for keys
+     enum llama_kv_cache_type cache_type_k = LLAMA_KV_CACHE_TYPE_F16;
+ 
++    // use custom KV quantization for values
++    enum llama_kv_cache_type cache_type_v = LLAMA_KV_CACHE_TYPE_F16;
++
++
+ };
+ 
+ // for CLI arguments that are common across all models
+diff --git a/common/common.cpp b/common/common.cpp
+index abcdef1..1234567 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1290,6 +1290,30 @@ struct cli_params {
+                 "KV cache quantization for keys. If not specified, defaults to F16",
+                 {"--cache-type-k", "-ctk"}
+             );
++            
++            add_param(
++                &params.cache_type_v,
++                [](enum llama_kv_cache_type & val, const std::string & arg) {
++                    val = llama_model_kv_cache_type_from_str(arg.c_str());
++                    if (val == LLAMA_KV_CACHE_TYPE_COUNT) {
++                        return CLI_PARAM_CONVERSION_ERROR;
++                    }
++                    return CLI_PARAM_CONVERSION_OK;
++                },
++                "KV cache quantization for values. If not specified, defaults to F16",
++                {"--cache-type-v", "-ctv"}
++            );
++            
++            // Combined KV cache quantization (sets both key and value)
++            add_param(
++                [&](const std::string & arg) {
++                    enum llama_kv_cache_type val = llama_model_kv_cache_type_from_str(arg.c_str());
++                    if (val == LLAMA_KV_CACHE_TYPE_COUNT) {
++                        return CLI_PARAM_CONVERSION_ERROR;
++                    }
++                    params.cache_type_k = params.cache_type_v = val;
++                    return CLI_PARAM_CONVERSION_OK;
++                },
++                "--kvq", "-kvq"
++            );
+         }
+ 
