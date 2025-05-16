@@ -26,13 +26,16 @@ jobs:
       run: |
         git clone https://github.com/ggerganov/llama.cpp || echo "llama.cpp already exists"
         cd llama.cpp
-        git apply ../patch/split_kv_quant.diff || echo "Patch already applied"
-        make -j # Skip Metal tests since GitHub Actions runs on Intel VMs
+        mkdir -p build
+        cd build
+        git apply ../../patch/split_kv_quant.diff || echo "Patch already applied"
+        cmake .. -DLLAMA_METAL=OFF -DLLAMA_AVX=ON -DLLAMA_AVX2=ON
+        cmake --build . --config Release -j
     
     - name: Smoke test (compilation only)
       run: |
-        cd llama.cpp
-        ./main -h | grep "kvq-key" && echo "✅ Patch successfully applied"
+        cd llama.cpp/build
+        ./bin/llama-cli -h | grep "kvq" && echo "✅ Patch successfully applied"
     
     - name: Python syntax check
       run: |
