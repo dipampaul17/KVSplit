@@ -159,7 +159,7 @@ This asymmetry allows for more efficient memory usage without compromising model
 ./llama.cpp/build/bin/llama-cli -m models/your-model.gguf -p "Your prompt" \
   -t 8 --flash-attn
 
-# ⭐ RECOMMENDED: 8-bit keys, 4-bit values (K8V4) 
+# ⭐ RECOMMENDED: 8-bit keys, 4-bit values (K8V4)
 # Best balance of quality and memory savings
 ./llama.cpp/build/bin/llama-cli -m models/your-model.gguf -p "Your prompt" \
   -t 8 --flash-attn --kvq 8
@@ -251,14 +251,14 @@ You can visualize memory savings with our capture tool:
 ## 🍎 Apple Silicon Optimization
 
 - **Metal Performance**: Fully optimized for Apple's Metal framework
-- **Memory Efficiency**: Critical for memory-constrained M1/M2/M3 devices
+- **Memory Efficiency**: Critical for memory-constrained M series Apple silicon devices
 - **Activity Monitor**: Use our `capture_memory.sh` script to visualize real-time memory reductions
 - **Alignment**: 256B page alignment in llama.cpp means actual memory savings might differ slightly from theoretical calculations
 
 ## ⭐ Key Features
 
 - **Differentiated Precision**: Independent key and value bit precision (K8V4, K4V8, etc)
-- **Apple Silicon Optimization**: Full Metal support for M1/M2/M3 chips
+- **Apple Silicon Optimization**: Full Metal support for M1/M2/M3/M4 chips
 - **Comprehensive Benchmarking**: Memory, speed, and quality metrics
 - **Publication-Quality Visualization**: Beautiful plots for analysis
 - **Simple User Interface**: One-command install and quick comparison tools
