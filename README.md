@@ -4,8 +4,8 @@
 
 **Differentiated KV Cache Quantization for Apple Silicon**
 
-[![GitHub Stars](https://img.shields.io/github/stars/dipampaul17/kvsplit?style=for-the-badge&logo=github)](https://github.com/dipampaul17/kvsplit/stargazers)
-[![License](https://img.shields.io/github/license/dipampaul17/kvsplit?style=for-the-badge)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/dipampaul17/KVSplit?style=for-the-badge&logo=github)](https://github.com/dipampaul17/KVSplit/stargazers)
+[![License](https://img.shields.io/github/license/dipampaul17/KVSplit?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Apple%20Silicon-black?style=for-the-badge&logo=apple)]()
 
 <img src="./plots/kv_cache_memory_usage.png" alt="KV Cache Memory Usage" width="70%">
@@ -60,7 +60,7 @@ Run **larger context windows** and **heavier LLMs** on your Mac by applying diff
 
 ```bash
 # Clone the repository
-git clone https://github.com/dipampaul17/kvsplit.git
+git clone https://github.com/dipampaul17/KVSplit.git
 cd kvsplit
 
 # Run the installer script
