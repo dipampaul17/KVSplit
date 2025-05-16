@@ -1,0 +1,173 @@
+diff --git a/common/arg.cpp b/common/arg.cpp
+index 0000000..0000000 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -802,17 +802,31 @@ static std::vector<std::string> arch_vec() {
+ 
+ // KV Cache quantization types
+ const std::vector<ggml_type> kv_cache_types = {
+-    GGML_TYPE_F16,
+-    GGML_TYPE_F32,
+-    GGML_TYPE_Q8_0,
+-    GGML_TYPE_Q4_0,
++    GGML_TYPE_F16,  // Default (FP16)
++    GGML_TYPE_F32,  // Full precision (FP32)
++    GGML_TYPE_Q8_0, // 8-bit quantization
++    GGML_TYPE_Q4_0, // 4-bit quantization
++};
++
++// Mapping of bit sizes to quantization types
++const std::unordered_map<int, ggml_type> kv_quant_bit_to_type = {
++    {16, GGML_TYPE_F16},  // 16-bit = FP16
++    {32, GGML_TYPE_F32},  // 32-bit = FP32
++    {8,  GGML_TYPE_Q8_0}, // 8-bit = Q8_0
++    {4,  GGML_TYPE_Q4_0}, // 4-bit = Q4_0
+ };
+ 
+ static ggml_type kv_cache_type_from_str(const std::string & s) {
+     for (const auto & type : kv_cache_types) {
+         if (s == ggml_type_name(type)) return type;
+     }
+-    return GGML_TYPE_COUNT; //invalid
++    
++    // Also try parsing bit sizes (4 or 8)
++    try {
++        int bits = std::stoi(s);
++        if (kv_quant_bit_to_type.find(bits) != kv_quant_bit_to_type.end()) {
++            return kv_quant_bit_to_type.at(bits);
++        }
++    } catch (...) {}
++    
++    return GGML_TYPE_COUNT; // invalid
+ }
+ 
+ static std::string get_all_kv_cache_types() {
+@@ -823,6 +837,30 @@ static std::string get_all_kv_cache_types() {
+     return msg.str();
+ }
+ 
++static std::string get_kv_quant_bit_options() {
++    // Return the supported bit sizes only (for --kvq-key and --kvq-val)
++    std::stringstream msg;
++    bool first = true;
++    for (const auto& pair : kv_quant_bit_to_type) {
++        if (!first) {
++            msg << ", ";
++        }
++        msg << pair.first;
++        first = false;
++    }
++    return msg.str();
++}
++
++// Helper to convert bit size to quantization type
++static ggml_type kv_quant_bits_to_type(int bits) {
++    auto it = kv_quant_bit_to_type.find(bits);
++    if (it != kv_quant_bit_to_type.end()) {
++        return it->second;
++    }
++    // Default to FP16 if invalid
++    return GGML_TYPE_F16;
++}
++
+ static ggml_backend_buffer_type_config ggml_backend_buffer_type_config_from_str(const std::string & s) {
+     auto config = ggml_backend_buffer_type_config_init();
+ 
+@@ -2086,6 +2124,43 @@ static void common_params_parser_init(arg_parser & parser, common_params & param
+     ).set_env("LLAMA_ARG_CACHE_TYPE_K"));
+ 
+     parser.add_arg(
++        add_arg_type::opt, "kvq-key", &kv_quant_key,
++        add_arg_handler([&](std::string_view value) {
++            try {
++                int bits = std::stoi(std::string(value));
++                // Set key cache quantization type
++                if (kv_quant_bit_to_type.find(bits) != kv_quant_bit_to_type.end()) {
++                    params.cache_type_k = kv_quant_bit_to_type.at(bits);
++                } else {
++                    LOG_ERROR("Invalid KV cache key quantization bits: %d (valid options: %s)\n", 
++                        bits, get_kv_quant_bit_options().c_str());
++                    return false;
++                }
++            } catch (...) {
++                LOG_ERROR("Invalid KV cache key quantization bits: '%s' (valid options: %s)\n", 
++                    std::string(value).c_str(), get_kv_quant_bit_options().c_str());
++                return false;
++            }
++            return true;
++        }, [&]() -> std::string { return ""; }),
++        "<int>",
++        "Set KV cache key quantization bits (options: " + get_kv_quant_bit_options() + ")"
++    ).set_env("LLAMA_ARG_KVQ_KEY");
++    
++    parser.add_arg(
++        add_arg_type::opt, "kvq-val", &kv_quant_val,
++        add_arg_handler([&](std::string_view value) {
++            try {
++                int bits = std::stoi(std::string(value));
++                // Set value cache quantization type
++                if (kv_quant_bit_to_type.find(bits) != kv_quant_bit_to_type.end()) {
++                    params.cache_type_v = kv_quant_bit_to_type.at(bits);
++                } else {
++                    LOG_ERROR("Invalid KV cache value quantization bits: %d (valid options: %s)\n", 
++                        bits, get_kv_quant_bit_options().c_str());
++                    return false;
++                }
++            } catch (...) {
++                LOG_ERROR("Invalid KV cache value quantization bits: '%s' (valid options: %s)\n", 
++                    std::string(value).c_str(), get_kv_quant_bit_options().c_str());
++                return false;
++            }
++            return true;
++        }, [&]() -> std::string { return ""; }),
++        "<int>",
++        "Set KV cache value quantization bits (options: " + get_kv_quant_bit_options() + ")"
++    ).set_env("LLAMA_ARG_KVQ_VAL");
++    
++    parser.add_arg(
++        add_arg_type::opt, "kvq", &kv_quant_general,
++        add_arg_handler([&](std::string_view value) {
++            try {
++                int bits = std::stoi(std::string(value));
++                // Set both key and value cache quantization to the same type for backwards compatibility
++                if (kv_quant_bit_to_type.find(bits) != kv_quant_bit_to_type.end()) {
++                    params.cache_type_k = kv_quant_bit_to_type.at(bits);
++                    params.cache_type_v = kv_quant_bit_to_type.at(bits);
++                } else {
++                    LOG_ERROR("Invalid KV cache quantization bits: %d (valid options: %s)\n", 
++                        bits, get_kv_quant_bit_options().c_str());
++                    return false;
++                }
++            } catch (...) {
++                LOG_ERROR("Invalid KV cache quantization bits: '%s' (valid options: %s)\n", 
++                    std::string(value).c_str(), get_kv_quant_bit_options().c_str());
++                return false;
++            }
++            return true;
++        }, [&]() -> std::string { return ""; }),
++        "<int>",
++        "Set both KV cache key and value quantization bits (options: " + get_kv_quant_bit_options() + ")"
++    ).set_env("LLAMA_ARG_KVQ");
++    
++    parser.add_arg(
+         add_arg_type::opt, "cache-type-v",
+         add_arg_handler([&](std::string_view value) {
+             params.cache_type_v = kv_cache_type_from_str(value);
+@@ -2096,5 +2171,17 @@ static void common_params_parser_init(arg_parser & parser, common_params & param
+         "Type for V cache: " + get_all_kv_cache_types() + " (default: " + ggml_type_name(params.cache_type_v) + ")"
+     ).set_env("LLAMA_ARG_CACHE_TYPE_V"));
+ }
+ 
++// Declarations for our new KV split parameters
++static std::string kv_quant_key;
++static std::string kv_quant_val;
++static std::string kv_quant_general;
++
++/* 
++ * Note: Memory measurements may show slight differences from theoretical calculations
++ * due to 256B page alignment in the llama.cpp allocator.
++ * 
++ * When using differentiated precision for keys and values:
++ * - Keys are more sensitive to quantization than values
++ * - K8V4 (8-bit keys, 4-bit values) generally provides a good balance
++ */

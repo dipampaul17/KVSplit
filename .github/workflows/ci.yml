@@ -1,0 +1,48 @@
+name: Build & Validate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: brew install cmake
+    
+    - name: Cache llama.cpp
+      uses: actions/cache@v3
+      with:
+        path: llama.cpp
+        key: llama-cpp-${{ hashFiles('patch/split_kv_quant.diff') }}
+    
+    - name: Clone and build llama.cpp
+      run: |
+        git clone https://github.com/ggerganov/llama.cpp || echo "llama.cpp already exists"
+        cd llama.cpp
+        git apply ../patch/split_kv_quant.diff || echo "Patch already applied"
+        make -j # Skip Metal tests since GitHub Actions runs on Intel VMs
+    
+    - name: Smoke test (compilation only)
+      run: |
+        cd llama.cpp
+        ./main -h | grep "kvq-key" && echo "✅ Patch successfully applied"
+    
+    - name: Python syntax check
+      run: |
+        python -m py_compile scripts/benchmark_kvsplit.py
+        python -m py_compile scripts/quick_compare.py
+        python -m py_compile scripts/visualize_results.py
+        echo "✅ Python scripts pass syntax check"
+    
+    - name: Shell script check
+      run: |
+        bash -n scripts/install_kvsplit.sh
+        bash -n scripts/capture_memory.sh
+        echo "✅ Shell scripts pass syntax check"

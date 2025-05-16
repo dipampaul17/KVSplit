@@ -1,0 +1,23 @@
+diff --git a/examples/common.cpp b/examples/common.cpp
+index abcdef1..1234567 100644
+--- a/examples/common.cpp
++++ b/examples/common.cpp
+@@ -123,6 +123,18 @@ void common_params_parser_init(const char * arg0, common_params * params, gpt_par
+                 params->cache_type_v = llama_kv_cache_type_from_str(value.c_str());
+             })
+         );
++
++        add_opt(common_arg(
++            {"--kvq"}, "BITS",
++            "Set both KV cache key and value quantization to same bits\nallowed values: 4, 8\n(default: 16 for FP16)",
++            [](common_params & params, const std::string & value) {
++                try {
++                    int bits = std::stoi(value);
++                    params->cache_type_k = bits == 4 ? GGML_TYPE_Q4_0 : GGML_TYPE_Q8_0;
++                    params->cache_type_v = bits == 4 ? GGML_TYPE_Q4_0 : GGML_TYPE_Q8_0;
++                } catch (const std::exception & e) {}
++            })
++        );
+         
+         add_opt(common_arg(
+             {"--cont-batching"}, "",

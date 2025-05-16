@@ -1,0 +1,42 @@
+# Ignore llama.cpp directory (users will clone it during installation)
+/llama.cpp/
+
+# Ignore models directory (large files)
+/models/*
+!models/.gitkeep
+
+# Python virtual environment
+/venv/
+/__pycache__/
+*.py[cod]
+*$py.class
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.a
+*.exe
+*.out
+
+# Logs and results (except examples)
+/results/*
+!results/.gitkeep
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+/capture_frames/
+*.tmp
+*~
+
+# Keep directory structure with .gitkeep files
+!*/
