@@ -5,7 +5,7 @@
 **Differentiated KV Cache Quantization for Apple Silicon**
 
 [![GitHub Stars](https://img.shields.io/github/stars/dipampaul17/KVSplit?style=for-the-badge&logo=github)](https://github.com/dipampaul17/KVSplit/stargazers)
-[![License](https://img.shields.io/github/license/dipampaul17/KVSplit?style=for-the-badge)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Apple%20Silicon-black?style=for-the-badge&logo=apple)]()
 
 <img src="./plots/kv_cache_memory_usage.png" alt="KV Cache Memory Usage" width="70%">
