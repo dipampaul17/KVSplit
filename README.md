@@ -56,7 +56,7 @@ Run **larger context windows** and **heavier LLMs** on your Mac by applying diff
 - Homebrew package manager
 - Xcode Command Line Tools
 
-## ⚡ One-Command Installation
+## ⚡ Flexible Installation
 
 ```bash
 # Clone the repository
@@ -68,12 +68,23 @@ chmod +x scripts/install_kvsplit.sh
 ./scripts/install_kvsplit.sh
 ```
 
+The installer provides flexible options:
+
+### 🐍 Python Setup Options
+- **Virtual Environment** (default): Creates a standalone Python environment in the project folder
+- **System Python**: Uses your existing Python installation instead of creating a virtual environment
+- **Skip Python Setup**: For users who prefer to manage their Python environment manually
+
+### 🔄 llama.cpp Integration Options
+- **Standard Method** (default): Clones llama.cpp and applies the KV split patch
+- **Git Submodule Method**: Adds llama.cpp as a git submodule (ideal for advanced users or development)
+
 The installer will:
-- Set up the project structure
-- Clone and build llama.cpp with Metal support
-- Configure for differentiated KV cache quantization
-- Download a small test model (optional)
-- Set up Python environment for visualization
+- Set up the project structure with your preferred configuration
+- Configure llama.cpp with Metal support optimized for Apple Silicon
+- Enable differentiated KV cache quantization
+- Offer to download a small test model (optional)
+- Set up visualization tools based on your Python preferences
 
 ## 🏎️ Quick Comparison
 

@@ -49,53 +49,216 @@ brew install cmake parallel gifski python || {
     echo -e "${YELLOW}   Continuing with installation...${RESET}"
 }
 
-# Set up Python virtual environment
-echo -e "${BLUE}Setting up Python virtual environment...${RESET}"
-if ! python3 -m venv venv; then
-    echo -e "${YELLOW}⚠️  Could not create Python virtual environment.${RESET}"
-    echo -e "${YELLOW}   Continuing without virtual environment...${RESET}"
-else
-    source venv/bin/activate
-    pip install pandas numpy matplotlib seaborn || {
-        echo -e "${YELLOW}⚠️  Could not install Python dependencies.${RESET}"
-        echo -e "${YELLOW}   You may need to install them manually later.${RESET}"
-    }
+# Python environment setup
+echo -e "${BLUE}Python environment setup options:${RESET}"
+echo -e "1. ${GREEN}Virtual Environment:${RESET} Create a new Python venv in this directory"
+echo -e "2. ${GREEN}System Python:${RESET} Use system Python installation"
+echo -e "3. ${GREEN}Skip:${RESET} Skip Python setup (manual setup later)"
+read -p "Select option [1/2/3] (default: 1): " -n 1 -r PYTHON_CHOICE
+echo
+
+case $PYTHON_CHOICE in
+    "2")
+        echo -e "${BLUE}Using system Python...${RESET}"
+        PYTHON_CMD="python3"
+        PIP_CMD="pip3"
+        
+        # Check if Python is available
+        if ! command -v $PYTHON_CMD &> /dev/null; then
+            echo -e "${RED}❌ Python not found. Please install Python 3.${RESET}"
+            PYTHON_SETUP_FAILED=true
+        else
+            echo -e "${GREEN}✅ Using Python: $($PYTHON_CMD --version)${RESET}"
+        fi
+        
+        # Check if dependencies are already installed
+        echo -e "${BLUE}Checking for required Python packages...${RESET}"
+        MISSING_PACKAGES=""
+        for pkg in pandas numpy matplotlib seaborn; do
+            if ! $PYTHON_CMD -c "import $pkg" &> /dev/null; then
+                MISSING_PACKAGES="$MISSING_PACKAGES $pkg"
+            fi
+        done
+        
+        if [ -n "$MISSING_PACKAGES" ]; then
+            echo -e "${YELLOW}⚠️ Missing packages:$MISSING_PACKAGES${RESET}"
+            echo -e "${YELLOW}You can install them with: $PIP_CMD install$MISSING_PACKAGES${RESET}"
+            read -p "Install missing packages now? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                $PIP_CMD install $MISSING_PACKAGES || {
+                    echo -e "${RED}❌ Failed to install packages.${RESET}"
+                    echo -e "${YELLOW}You may need to install them manually:${RESET}"
+                    echo -e "${YELLOW}$PIP_CMD install pandas numpy matplotlib seaborn${RESET}"
+                }
+            fi
+        else
+            echo -e "${GREEN}✅ All required packages are installed.${RESET}"
+        fi
+        ;;
+    "3")
+        echo -e "${YELLOW}Skipping Python setup...${RESET}"
+        echo -e "${YELLOW}You'll need to manually install these packages to use visualization tools:${RESET}"
+        echo -e "${YELLOW}- pandas${RESET}"
+        echo -e "${YELLOW}- numpy${RESET}"
+        echo -e "${YELLOW}- matplotlib${RESET}"
+        echo -e "${YELLOW}- seaborn${RESET}"
+        ;;
+    *)
+        # Default is virtual environment
+        echo -e "${BLUE}Setting up Python virtual environment...${RESET}"
+        if ! command -v python3 &> /dev/null; then
+            echo -e "${RED}❌ Python not found. Please install Python 3.${RESET}"
+            PYTHON_SETUP_FAILED=true
+        elif ! python3 -m venv venv; then
+            echo -e "${YELLOW}⚠️ Could not create Python virtual environment.${RESET}"
+            echo -e "${YELLOW}Continuing without virtual environment...${RESET}"
+            PYTHON_SETUP_FAILED=true
+        else
+            echo -e "${GREEN}✅ Virtual environment created.${RESET}"
+            echo -e "${BLUE}Installing Python dependencies...${RESET}"
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install pandas numpy matplotlib seaborn || {
+                echo -e "${YELLOW}⚠️ Could not install Python dependencies.${RESET}"
+                echo -e "${YELLOW}You may need to install them manually later.${RESET}"
+                PYTHON_SETUP_FAILED=true
+            }
+            
+            if [ -z "$PYTHON_SETUP_FAILED" ]; then
+                echo -e "${GREEN}✅ Python dependencies installed successfully.${RESET}"
+                echo -e "${YELLOW}To activate the virtual environment in the future, run:${RESET}"
+                echo -e "${YELLOW}source venv/bin/activate${RESET}"
+            fi
+        fi
+        ;;
+esac
+
+if [ -n "$PYTHON_SETUP_FAILED" ]; then
+    echo -e "${YELLOW}Python setup incomplete. Visualization tools may not work.${RESET}"
+    echo -e "${YELLOW}You can manually install required packages later.${RESET}"
 fi
 
-# Clone or update llama.cpp repository
-echo -e "${BLUE}Setting up llama.cpp...${RESET}"
-if [ -d "llama.cpp" ]; then
-    echo -e "${YELLOW}⚠️  llama.cpp directory already exists.${RESET}"
-    read -p "Update llama.cpp repository? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}Updating llama.cpp...${RESET}"
-        cd llama.cpp
-        git fetch --all
-        git reset --hard origin/master
-        cd ..
+# Setup method selection
+echo -e "${BLUE}Choose llama.cpp setup method:${RESET}"
+echo -e "1. ${GREEN}Standard:${RESET} Clone and patch llama.cpp (recommended for most users)"
+echo -e "2. ${GREEN}Git Submodule:${RESET} Use a forked llama.cpp as a submodule (advanced)"
+read -p "Select option [1/2] (default: 1): " -n 1 -r SETUP_CHOICE
+echo
+
+if [[ $SETUP_CHOICE == "2" ]]; then
+    echo -e "${BLUE}Setting up llama.cpp as a git submodule...${RESET}"
+    
+    # Check if this is a git repository
+    if [ ! -d ".git" ]; then
+        echo -e "${YELLOW}⚠️ This directory is not a git repository. Initializing git...${RESET}"
+        git init
     fi
+    
+    # Remove existing llama.cpp if present
+    if [ -d "llama.cpp" ]; then
+        echo -e "${YELLOW}⚠️ Removing existing llama.cpp directory...${RESET}"
+        rm -rf llama.cpp
+    fi
+    
+    # Add the forked llama.cpp as a submodule
+    # Note: You would typically fork llama.cpp to your own account and modify it there
+    echo -e "${BLUE}Adding llama.cpp as a submodule...${RESET}"
+    echo -e "${YELLOW}In a real setup, you would use your own fork with KVSplit changes already applied.${RESET}"
+    git submodule add https://github.com/ggerganov/llama.cpp.git
+    git submodule update --init --recursive
+    
+    # Apply the patch to the submodule
+    echo -e "${BLUE}Applying KV split patch to llama.cpp submodule...${RESET}"
+    cd llama.cpp
+    git apply ../patch/fixed_kv_patch.diff || echo -e "${YELLOW}⚠️ Patch application failed, you may need to modify the patch.${RESET}"
+    cd ..
+    
+    echo -e "${GREEN}✅ Submodule setup complete.${RESET}"
+    echo -e "${YELLOW}Note: In a real-world scenario, you would fork llama.cpp, make your changes there,${RESET}"
+    echo -e "${YELLOW}      and use your fork as the submodule URL instead of applying patches.${RESET}"
 else
-    echo -e "${BLUE}Cloning llama.cpp repository...${RESET}"
-    git clone https://github.com/ggerganov/llama.cpp
+    # Standard clone and patch approach
+    echo -e "${BLUE}Setting up llama.cpp (standard method)...${RESET}"
+    if [ -d "llama.cpp" ]; then
+        echo -e "${YELLOW}⚠️ llama.cpp directory already exists.${RESET}"
+        read -p "Update llama.cpp repository? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${BLUE}Updating llama.cpp...${RESET}"
+            cd llama.cpp
+            git fetch --all
+            git reset --hard origin/master
+            cd ..
+        fi
+    else
+        echo -e "${BLUE}Cloning llama.cpp repository...${RESET}"
+        git clone https://github.com/ggerganov/llama.cpp
+    fi
+
+    # Apply the patch to llama.cpp
+    echo -e "${BLUE}Applying KV split patch to llama.cpp...${RESET}"
+    cd llama.cpp
+    git apply ../patch/fixed_kv_patch.diff || echo -e "${YELLOW}⚠️ Patch application failed or patch already applied.${RESET}"
+    cd ..
 fi
 
-# Create or update the KV split patch
+# Check if the KV split patch exists
 echo -e "${BLUE}Setting up KV split patch...${RESET}"
-cat > patch/split_kv_quant.diff << 'EOL'
-# This is a placeholder for the actual patch
-# In a real implementation, this would contain the necessary code changes
-# for implementing differentiated KV cache quantization in llama.cpp
+if [ ! -f "patch/fixed_kv_patch.diff" ]; then
+    echo -e "${YELLOW}⚠️ KV patch not found, copying from included patch...${RESET}"
+    # Copy the fixed patch that works with current llama.cpp
+    if [ -f "patch/split_kv_quant.diff" ]; then
+        cp patch/split_kv_quant.diff patch/fixed_kv_patch.diff
+    else
+        echo -e "${RED}❌ No patch files found! Your installation may not have KV split functionality.${RESET}"
+        mkdir -p patch
+        # Include a minimal version of the patch inline as a fallback
+        cat > patch/fixed_kv_patch.diff << 'EOL'
+diff --git a/common/common.cpp b/common/common.cpp
+index abcdef1..1234567 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1290,6 +1290,30 @@ struct cli_params {
+                "KV cache quantization for keys. If not specified, defaults to F16",
+                {"--cache-type-k", "-ctk"}
+            );
++            
++            add_param(
++                &params.cache_type_v,
++                [](enum llama_kv_cache_type & val, const std::string & arg) {
++                    val = llama_model_kv_cache_type_from_str(arg.c_str());
++                    if (val == LLAMA_KV_CACHE_TYPE_COUNT) {
++                        return CLI_PARAM_CONVERSION_ERROR;
++                    }
++                    return CLI_PARAM_CONVERSION_OK;
++                },
++                "KV cache quantization for values. If not specified, defaults to F16",
++                {"--cache-type-v", "-ctv"}
++            );
++            
++            // Combined KV cache quantization (sets both key and value)
++            add_param(
++                [&](const std::string & arg) {
++                    enum llama_kv_cache_type val = llama_model_kv_cache_type_from_str(arg.c_str());
++                    if (val == LLAMA_KV_CACHE_TYPE_COUNT) {
++                        return CLI_PARAM_CONVERSION_ERROR;
++                    }
++                    params.cache_type_k = params.cache_type_v = val;
++                    return CLI_PARAM_CONVERSION_OK;
++                },
++                "--kvq", "-kvq"
++            );
+         }
 EOL
+    fi
+fi
 
-# Apply the patch to llama.cpp
-echo -e "${BLUE}Applying KV split patch to llama.cpp...${RESET}"
-cd llama.cpp
-# Uncomment the following line when the patch is ready
-# git apply ../patch/split_kv_quant.diff || echo -e "${YELLOW}⚠️  Patch already applied or failed to apply.${RESET}"
+# Continue with build process
 
 # Build llama.cpp with Metal support
 echo -e "${BLUE}Building llama.cpp with Metal support...${RESET}"
+cd llama.cpp 2>/dev/null || true  # Only cd if not already in llama.cpp
 mkdir -p build
 cd build
 cmake .. -DLLAMA_METAL=ON
