@@ -55,26 +55,26 @@ def create_temp_prompt_file(prompt, min_length=200):
 def parse_memory_from_output(output):
     """Parse memory usage metrics from llama.cpp output"""
     try:
-        # Parse KV cache size
-        kv_cache_match = re.search(r'KV cache elements: (\d+).* (\d+(\.\d+)?) MiB', output, re.MULTILINE)
-        if kv_cache_match:
-            kv_cache_mb = float(kv_cache_match.group(2))
-        else:
-            kv_cache_mb = None
+        # Look for KV cache memory usage
+        kv_cache_mb = None
+        kv_match = re.search(r'KV cache elements: \d+.*?(\d+(?:\.\d+)?) MiB', output, re.MULTILINE)
+        if kv_match:
+            kv_cache_mb = float(kv_match.group(1))
 
-        # Parse total VRAM usage
-        vram_match = re.search(r'VRAM usage: (\d+(\.\d+)?) MiB', output, re.MULTILINE)
-        if vram_match:
-            vram_mb = float(vram_match.group(1))
-        else:
-            # Alternative pattern
-            vram_match = re.search(r'GPU memory used: (\d+) bytes = (\d+(\.\d+)?) MB', output, re.MULTILINE)
-            if vram_match:
-                vram_mb = float(vram_match.group(2))
-            else:
-                vram_mb = None
-                
+        # Look for VRAM usage (try multiple patterns)
+        vram_mb = None
+        patterns = [
+            r'VRAM usage: (\d+(?:\.\d+)?) MiB',
+            r'GPU memory used: \d+ bytes = (\d+(?:\.\d+)?) MB'
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, output, re.MULTILINE)
+            if match:
+                vram_mb = float(match.group(1))
+                break
+
         return kv_cache_mb, vram_mb
+
     except Exception as e:
         print_color(RED, f"Error parsing memory metrics: {e}")
         return None, None
